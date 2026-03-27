@@ -1,0 +1,35 @@
+# Requires honor-points-service stack running first (shared MongoDB)
+
+services:
+  honor-shop-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: honor-shop-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - MONGO_URI=mongodb://honorbot-mongodb:27017/honorbot
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - honor-shop-network
+      - honor-points-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  honor-shop-network:
+    driver: bridge
+  honor-points-network:
+    external: true
+    name: honor-points-service_honor-points-network
