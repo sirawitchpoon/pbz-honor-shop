@@ -59,6 +59,11 @@ export async function purchaseProduct(params: {
     return { success: false, error: 'This product is no longer available.' };
   }
 
+  // Current shop policy: only role rewards are purchasable.
+  if (product.category !== 'role') {
+    return { success: false, error: 'This reward category is no longer available.' };
+  }
+
   if (product.stock === 0) {
     return { success: false, error: 'This product is out of stock.' };
   }

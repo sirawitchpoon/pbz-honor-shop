@@ -20,8 +20,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
       'The Honor Shop lets you spend your Honor Points on exclusive rewards!\n\n' +
       '**Categories:**\n' +
       '> 👑 Roles — Exclusive server roles\n' +
-      '> 🎮 Steam Gift Cards — Digital gift card codes\n' +
-      '> 💎 Discord Nitro — Nitro subscriptions\n\n' +
+      '\n' +
       (channelId
         ? `Head to <#${channelId}> to browse and purchase items!`
         : 'The shop channel has not been configured yet.')

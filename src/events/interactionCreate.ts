@@ -33,6 +33,13 @@ export async function execute(interaction: Interaction): Promise<void> {
     return;
   }
 
+  if (interaction.isStringSelectMenu()) {
+    if (interaction.customId === 'shop_role_select') {
+      await handleRoleSelect(interaction);
+    }
+    return;
+  }
+
   if (!interaction.isButton()) return;
   if (!interaction.guild || !interaction.member) return;
 
@@ -65,6 +72,63 @@ export async function execute(interaction: Interaction): Promise<void> {
       }
     } catch {}
   }
+}
+
+// ── Role Select (dropdown) ──
+
+async function handleRoleSelect(interaction: any): Promise<void> {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const productId = interaction.values?.[0];
+  if (!productId || productId === 'no_roles') {
+    await interaction.editReply({ content: 'No roles are currently available.' });
+    return;
+  }
+
+  const product = await ShopService.getProductById(productId);
+  if (!product || !product.active || product.category !== 'role') {
+    await interaction.editReply({ content: 'This role is no longer available.' });
+    return;
+  }
+
+  const balResult = await HonorPoints.getBalance(interaction.user.id);
+  const balance = balResult.honorPoints;
+  const canAfford = balance >= product.price;
+
+  const embed = new EmbedBuilder()
+    .setTitle('Confirm Purchase')
+    .setDescription(
+      `**${product.name}**\n${product.description || ''}\n\n` +
+      `Price: **${product.price.toLocaleString()} HP**\n` +
+      `Your Balance: **${balance.toLocaleString()} HP**\n` +
+      `After Purchase: **${canAfford ? (balance - product.price).toLocaleString() : '—'} HP**`
+    )
+    .setColor(canAfford ? 0x10b981 : 0xef4444);
+
+  if (product.imageUrl) {
+    embed.setThumbnail(product.imageUrl);
+  }
+
+  if (!canAfford) {
+    embed.addFields({
+      name: 'Insufficient Balance',
+      value: `You need **${(product.price - balance).toLocaleString()} more HP** to purchase this item.`,
+    });
+  }
+
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`shop_confirm_${product.productId}`)
+      .setLabel('Confirm Purchase')
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(!canAfford),
+    new ButtonBuilder()
+      .setCustomId('shop_cancel')
+      .setLabel('Cancel')
+      .setStyle(ButtonStyle.Danger),
+  );
+
+  await interaction.editReply({ embeds: [embed], components: [row] });
 }
 
 // ── Category Browse ──
