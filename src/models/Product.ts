@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-export type ProductCategory = 'role' | 'steam_gift_card' | 'discord_nitro';
+export type ProductCategory = 'role' | 'access_perk' | 'community_perk' | 'legend_reward';
 
 export interface IProduct {
   productId: string;
@@ -25,7 +25,7 @@ const ProductSchema = new mongoose.Schema<IProduct>(
     category: {
       type: String,
       required: true,
-      enum: ['role', 'steam_gift_card', 'discord_nitro'],
+      enum: ['role', 'access_perk', 'community_perk', 'legend_reward'],
       index: true,
     },
     price: { type: Number, required: true, min: 1 },

@@ -17,7 +17,7 @@ export async function logShopAction(payload: {
   if (!isBotsLoggerEnabled()) return;
 
   try {
-    await fetch(`${loggerUrl}/api/logs`, {
+    const res = await fetch(`${loggerUrl}/api/logs`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -32,7 +32,10 @@ export async function logShopAction(payload: {
         details: payload.details,
       }),
     });
+    if (!res.ok) {
+      console.warn(`[ShopLogger] Failed to send log (${res.status} ${res.statusText}) action=${payload.action}`);
+    }
   } catch {
-    // Non-critical
+    console.warn(`[ShopLogger] Logger request failed action=${payload.action}`);
   }
 }

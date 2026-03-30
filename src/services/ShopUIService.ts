@@ -26,54 +26,72 @@ export function getShopMessageId(): string | null {
   return shopMessageId;
 }
 
-async function getProductCounts(): Promise<{ roles: number }> {
-  const roles = await Product.countDocuments({ category: 'role', active: true, stock: { $ne: 0 } });
-  return { roles };
+async function getProductCounts(): Promise<{ roles: number; access: number; community: number; legend: number }> {
+  const [roles, access, community, legend] = await Promise.all([
+    Product.countDocuments({ category: 'role', active: true, stock: { $ne: 0 } }),
+    Product.countDocuments({ category: 'access_perk', active: true, stock: { $ne: 0 } }),
+    Product.countDocuments({ category: 'community_perk', active: true, stock: { $ne: 0 } }),
+    Product.countDocuments({ category: 'legend_reward', active: true, stock: { $ne: 0 } }),
+  ]);
+  return { roles, access, community, legend };
 }
 
-function buildShopEmbed(counts: { roles: number }): EmbedBuilder {
+function buildShopEmbed(counts: { roles: number; access: number; community: number; legend: number }): EmbedBuilder {
   const testBadge = isTestMode() ? '  `[TEST MODE]`' : '';
 
   return new EmbedBuilder()
     .setTitle(`Honor Shop${testBadge}`)
     .setDescription(
       'Welcome to the **Honor Shop**! Spend your Honor Points on exclusive rewards.\n\n' +
-      'Browse categories below to see available items. All purchases are final unless refunded by an admin.\n\n' +
+      'Browse rewards below to see available items. All purchases are final unless refunded by an admin.\n\n' +
       `**Available Items**\n` +
-      `> Roles — ${counts.roles} item${counts.roles !== 1 ? 's' : ''}`
+      `> Roles — ${counts.roles} item${counts.roles !== 1 ? 's' : ''}\n` +
+      `> Access Perks — ${counts.access} item${counts.access !== 1 ? 's' : ''}\n` +
+      `> Community Perks — ${counts.community} item${counts.community !== 1 ? 's' : ''}\n` +
+      `> Legend Rewards — ${counts.legend} item${counts.legend !== 1 ? 's' : ''}`
     )
     .setColor(0x8b5cf6)
-    .setFooter({ text: 'Use the dropdown to select roles, or use utility buttons below' })
+    .setFooter({ text: 'Use the dropdown to select rewards, or use utility buttons below' })
     .setTimestamp();
 }
 
-async function buildRoleSelectRow(): Promise<ActionRowBuilder<StringSelectMenuBuilder>> {
-  const products = await Product.find({ category: 'role', active: true, $or: [{ stock: { $ne: 0 } }, { stock: -1 }] })
+async function buildRewardSelectRow(): Promise<ActionRowBuilder<StringSelectMenuBuilder>> {
+  const products = await Product.find({
+    category: { $in: ['role', 'access_perk', 'community_perk', 'legend_reward'] },
+    active: true,
+    $or: [{ stock: { $ne: 0 } }, { stock: -1 }],
+  })
     .sort({ price: 1 })
     .limit(25)
     .lean();
 
   const menu = new StringSelectMenuBuilder()
-    .setCustomId('shop_role_select')
-    .setPlaceholder(products.length > 0 ? 'Select a role to purchase' : 'No roles currently available')
+    .setCustomId('shop_reward_select')
+    .setPlaceholder(products.length > 0 ? 'Select a reward to purchase' : 'No rewards currently available')
     .setDisabled(products.length === 0);
 
   if (products.length === 0) {
     menu.addOptions(
       new StringSelectMenuOptionBuilder()
-        .setLabel('No roles available')
+        .setLabel('No rewards available')
         .setDescription('Please check again later.')
-        .setValue('no_roles')
+        .setValue('no_rewards')
         .setEmoji('⏳'),
     );
   } else {
+    const categoryEmoji: Record<string, string> = {
+      role: '👑',
+      access_perk: '🛡️',
+      community_perk: '💬',
+      legend_reward: '🏆',
+    };
     const options = products.map((p) => {
       const stockText = p.stock === -1 ? 'Unlimited' : `${p.stock} left`;
       return new StringSelectMenuOptionBuilder()
         .setLabel(`${p.name} — ${p.price.toLocaleString()} HP`.slice(0, 100))
-        .setDescription(`${p.description || 'Role reward'} · ${stockText}`.slice(0, 100))
+        .setDescription(`${p.description || 'Reward item'} · ${stockText}`.slice(0, 100))
         .setValue(p.productId)
-        .setEmoji('👑');
+        .setEmoji(categoryEmoji[p.category] || '🎁');
     });
     menu.addOptions(options);
   }
@@ -113,7 +131,7 @@ async function ensureShopMessage(client: Client): Promise<void> {
 
     const counts = await getProductCounts();
     const embed = buildShopEmbed(counts);
-    const roleSelectRow = await buildRoleSelectRow();
+    const roleSelectRow = await buildRewardSelectRow();
     const utilityRow = buildShopButtons();
 
     // Banner slot: place your image file at assets/shop-banner.png

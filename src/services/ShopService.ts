@@ -17,8 +17,9 @@ function generatePurchaseId(): string {
 
 const CATEGORY_LABELS: Record<ProductCategory, string> = {
   role: 'Roles',
-  steam_gift_card: 'Steam Gift Cards',
-  discord_nitro: 'Discord Nitro',
+  access_perk: 'Access Perks',
+  community_perk: 'Community Perks',
+  legend_reward: 'Legend Rewards',
 };
 
 export function getCategoryLabel(cat: ProductCategory): string {
@@ -57,11 +58,6 @@ export async function purchaseProduct(params: {
   const product = await Product.findOne({ productId: params.productId, active: true }).lean<IProduct>();
   if (!product) {
     return { success: false, error: 'This product is no longer available.' };
-  }
-
-  // Current shop policy: only role rewards are purchasable.
-  if (product.category !== 'role') {
-    return { success: false, error: 'This reward category is no longer available.' };
   }
 
   if (product.stock === 0) {
@@ -114,7 +110,7 @@ export async function purchaseProduct(params: {
       return { success: false, error: 'Product went out of stock. Your Honor Points have been refunded.' };
     }
 
-    // Auto-deactivate single-use digital items when stock hits 0
+    // Auto-deactivate limited non-role perks when stock hits 0
     if (updated.stock === 0 && product.category !== 'role') {
       await Product.updateOne({ productId: params.productId }, { active: false });
     }
@@ -140,8 +136,8 @@ export async function purchaseProduct(params: {
       }
       return { success: false, error: 'Failed to assign role. Your Honor Points have been refunded.' };
     }
-  } else if (product.deliveryContent) {
-    deliveredContent = product.deliveryContent;
+  } else {
+    deliveredContent = product.deliveryContent || 'Manual fulfillment: A staff member will process this reward and contact you shortly.';
   }
 
   // Record purchase

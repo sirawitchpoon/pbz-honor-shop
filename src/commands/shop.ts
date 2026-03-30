@@ -20,6 +20,9 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
       'The Honor Shop lets you spend your Honor Points on exclusive rewards!\n\n' +
       '**Categories:**\n' +
       '> 👑 Roles — Exclusive server roles\n' +
+      '> 🛡️ Access Perks — Priority channels, support, and permissions\n' +
+      '> 💬 Community Perks — Community features and participation perks\n' +
+      '> 🏆 Legend Rewards — High-tier spotlight and prestige rewards\n' +
       '\n' +
       (channelId
         ? `Head to <#${channelId}> to browse and purchase items!`

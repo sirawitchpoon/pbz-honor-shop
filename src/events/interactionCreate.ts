@@ -34,8 +34,8 @@ export async function execute(interaction: Interaction): Promise<void> {
   }
 
   if (interaction.isStringSelectMenu()) {
-    if (interaction.customId === 'shop_role_select') {
-      await handleRoleSelect(interaction);
+    if (interaction.customId === 'shop_reward_select') {
+      await handleRewardSelect(interaction);
     }
     return;
   }
@@ -76,20 +76,28 @@ export async function execute(interaction: Interaction): Promise<void> {
 
 // ── Role Select (dropdown) ──
 
-async function handleRoleSelect(interaction: any): Promise<void> {
+async function handleRewardSelect(interaction: any): Promise<void> {
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const productId = interaction.values?.[0];
-  if (!productId || productId === 'no_roles') {
-    await interaction.editReply({ content: 'No roles are currently available.' });
+  if (!productId || productId === 'no_rewards') {
+    await interaction.editReply({ content: 'No rewards are currently available.' });
     return;
   }
 
   const product = await ShopService.getProductById(productId);
-  if (!product || !product.active || product.category !== 'role') {
-    await interaction.editReply({ content: 'This role is no longer available.' });
+  if (!product || !product.active) {
+    await interaction.editReply({ content: 'This reward is no longer available.' });
     return;
   }
+
+  logShopAction({
+    userId: interaction.user.id,
+    username: interaction.user.username,
+    category: 'shop',
+    action: 'select_reward_from_dropdown',
+    details: { productId: product.productId, productName: product.name, price: product.price },
+  });
 
   const balResult = await HonorPoints.getBalance(interaction.user.id);
   const balance = balResult.honorPoints;
@@ -319,11 +327,13 @@ async function handleConfirmPurchase(interaction: any): Promise<void> {
 
   if (p.deliveryContent) {
     embed.addFields({
-      name: 'Your Code / Link',
-      value: `||${p.deliveryContent}||`,
+      name: p.roleAssigned ? 'Your Code / Link' : 'Fulfillment Details',
+      value: p.roleAssigned ? `||${p.deliveryContent}||` : p.deliveryContent,
       inline: false,
     });
-    embed.setFooter({ text: 'This code is shown only to you. Save it now!' });
+    if (p.roleAssigned) {
+      embed.setFooter({ text: 'This code is shown only to you. Save it now!' });
+    }
   }
 
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
